@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "id": "config1",
+            "merchantId": "your-merchant-id",
+            "password": "basic-auth-password",
+            "referenceNumber": {
+                "type": "random",
+                "length": [12, 16],
+                "prefix": "ORD-"
+            },
+            "currencies": ["CHF", "EUR", "USD"],
+            "amounts": {
+                "range": [50, 10000],
+                "specific": [500, 1500, 5000]
+            },
+            "transactionFlows": {
+                "authorizeAutoCapture": 5,
+                "authorizeNoCapture": 3
+            },
+            "limits": {
+                "topUp": 50,
+                "refund": 90
+            }
+        }
+    ]
+}

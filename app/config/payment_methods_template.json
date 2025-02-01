@@ -1,0 +1,47 @@
+[
+    {
+        "type": "card",
+        "alias": "card-alias-1",
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "alias": "card-alias-2",
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "ranges": {
+            "success": [
+                100,
+                9000
+            ],
+            "decline": [
+                9001,
+                100000
+            ]
+        }
+    },
+    {
+        "type": "TWI",
+        "alias": "twint-alias",
+        "maxAttempts": 10,
+        "ranges": {
+            "success": [
+                50,
+                100
+            ]
+        },
+        "currencies": [
+            "CHF"
+        ],
+        "configurations": [
+            1
+        ],
+        "transactionFlows": [
+            "authorizeAutoCapture",
+            "authorizeCancel",
+            "authorizeCapture",
+            "authorizeCaptureRefund"
+        ]
+    }
+]
