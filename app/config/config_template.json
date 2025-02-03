@@ -1,22 +1,57 @@
 {
     "configurations": [
         {
-            "id": "config1",
-            "merchantId": "your-merchant-id",
+            "id": 1,
+            "merchantId": "merchant-id",
             "password": "basic-auth-password",
             "referenceNumber": {
                 "type": "random",
-                "length": [12, 16],
+                "length": [
+                    12,
+                    16
+                ],
                 "prefix": "ORD-"
             },
-            "currencies": ["CHF", "EUR", "USD"],
+            "currencies": [
+                "CHF",
+                "EUR",
+                "USD"
+            ],
             "amounts": {
-                "range": [50, 10000],
-                "specific": [500, 1500, 5000]
+                "range": [
+                    100,
+                    10000
+                ],
+                "specific": [
+                    500,
+                    1500,
+                    5000
+                ]
             },
             "transactionFlows": {
-                "authorizeAutoCapture": 5,
-                "authorizeNoCapture": 3
+                    "MIT": {
+                        "authorizeAutoCapture": 1,
+                        "authorizeNoCapture": 1,
+                        "decline": 1,
+                        "authorizeCancel": 1,
+                        "authorizeCapture": 1,
+                        "authorizeCaptureRefund": 1,
+                        "authorizeCapturePartialRefund": 1,
+                        "authorizeCaptureRefundPartial": 1,
+                        "authorizeAutoCaptureRefundMany": 1
+                    },
+                    "CIT": {
+                        "decline3DS": 1,
+                        "authorizeAutoCapture": 1,
+                        "authorizeNoCapture": 1,
+                        "decline": 1,
+                        "authorizeCancel": 1,
+                        "authorizeCapture": 1,
+                        "authorizeCaptureRefund": 1,
+                        "authorizeCapturePartialRefund": 1,
+                        "authorizeCaptureRefundPartial": 1,
+                        "authorizeAutoCaptureRefundMany": 1
+                    }
             },
             "limits": {
                 "topUp": 50,

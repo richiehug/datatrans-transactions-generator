@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "description": "The Datatrans Transactions Generator is your ultimate tool for simulating transactions in Datatrans' test environment. Whether you're testing payment flows, debugging, or just having fun with transaction scenarios, this script has got you covered.",
   "main": "index.js",
-  "keywords": ["Datatrans","Payment"],
+  "keywords": [
+    "Datatrans",
+    "Payment"
+  ],
   "author": "Richard Hug",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.9",
-    "uuid": "^11.0.5"
+    "axios": "^1.6.2",
+    "date-fns": "^3.3.1",
+    "dotenv": "^16.3.1",
+    "puppeteer": "^24.1.1",
+    "uuid": "^9.0.1"
   }
 }

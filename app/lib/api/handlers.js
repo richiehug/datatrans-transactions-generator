@@ -1,74 +1,161 @@
 const axios = require('axios');
 const { logMessage } = require('../utils/logger');
-const { getRandomNumber } = require('../utils/helpers');
 
 const getAuthHeader = (merchantConfig) => {
-    const authString = `${merchantConfig.merchantId}:${merchantConfig.password}`;
-    return `Basic ${Buffer.from(authString).toString('base64')}`;
-};
-
-const makeApiCall = async (merchantConfig, endpoint, payload, method = 'post', allowedStatuses = [200, 201, 204]) => {
-    const url = `https://api.sandbox.datatrans.com/v1/transactions/${endpoint}`;
-    const headers = {
-        'Authorization': getAuthHeader(merchantConfig),
-        'Content-Type': 'application/json'
-    };
-
-    logMessage(`Calling ${method.toUpperCase()} ${url}, Payload: ${JSON.stringify(payload)}`);
-
-    try {
-        const response = await axios({ method, url, data: payload, headers });
-        if (allowedStatuses.includes(response.status)) {
-            logMessage(`API call succeeded (${response.status})`);
-            return response.data;
-        }
-        throw new Error(`Unexpected status code: ${response.status}`);
-    } catch (error) {
-        if (error.response && allowedStatuses.includes(error.response.status)) {
-            logMessage(`API call returned expected status (${error.response.status})`);
-            return error.response.data;
-        }
-        logMessage(`API call failed: ${error.message}`);
-        throw error;
-    }
+    return `Basic ${Buffer.from(`${merchantConfig.merchantId}:${merchantConfig.password}`).toString('base64')}`;
 };
 
 const transactionOperations = {
-    authorize: async (merchantConfig, refNo, amount, currency, paymentMethod, flowType) => {
+    async initiateFlow(merchantConfig, flowType, refNo, amount, currency, paymentMethod, uuid) {
+        if (flowType.startsWith('CIT')) {
+            return this.initCIT(merchantConfig, refNo, amount, currency, paymentMethod, flowType, uuid);
+        }
+        return this.authorizeMIT(merchantConfig, refNo, amount, currency, paymentMethod, flowType, uuid);
+    },
+
+    async authorizeMIT(merchantConfig, refNo, amount, currency, paymentMethod, flowType, uuid) {
         const payload = {
             refno: refNo,
             amount: amount,
             currency: currency,
-            autoSettle: flowType.includes("autoCapture"),
+            autoSettle: flowType.toLowerCase().includes('autocapture'),
             [paymentMethod.type]: {
                 alias: paymentMethod.alias,
-                ...(paymentMethod.type === "card" ? {
+                ...(paymentMethod.type === 'card' && {
                     expiryMonth: paymentMethod.expiryMonth,
                     expiryYear: paymentMethod.expiryYear
-                } : {})
+                })
             }
         };
-
-        const allowedStatuses = flowType === "decline" ? [400] : [200, 201];
-        const response = await makeApiCall(merchantConfig, 'authorize', payload, 'post', allowedStatuses);
-        return flowType === "decline" ? null : response;
+    
+        try {
+            const response = await axios.post(
+                'https://api.sandbox.datatrans.com/v1/transactions/authorize',
+                payload,
+                {
+                    headers: {
+                        'Authorization': getAuthHeader(merchantConfig),
+                        'Content-Type': 'application/json'
+                    },
+                    // Allow 400 status for expected declines
+                    validateStatus: (status) => status === 200 || status === 400
+                }
+            );
+    
+            if (response.status === 400) {
+                logMessage(`[${uuid}] MIT Authorization declined as expected: ${response.data.error.message}`);
+                return null; // Indicate expected decline
+            }
+    
+            logMessage(`[${uuid}] MIT Authorization successful: ${response.data.transactionId}`);
+            return response.data;
+        } catch (error) {
+            const errorData = error.response?.data || {};
+            logMessage(`[${uuid}] MIT Authorization failed: ${errorData.message || error.message}`);
+            throw error;
+        }
     },
 
-    capture: async (merchantConfig, transactionId, amount, currency, refno) => {
-        return makeApiCall(merchantConfig, `${transactionId}/settle`, { amount, currency, refno });
+    async initCIT(merchantConfig, refNo, amount, currency, paymentMethod, flowType, uuid) {
+        const redirectUrls = {
+            successUrl: `https://richiehug.requestcatcher.com/confirmation/${refNo}?r=success`,
+            errorUrl: `https://richiehug.requestcatcher.com/checkout/${refNo}?r=error`,
+            cancelUrl: `https://richiehug.requestcatcher.com/checkout/${refNo}?r=cancel`
+        };
+    
+        const webhookUrl = `https://richiehug.requestcatcher.com/webhook/${refNo}`;
+    
+        const payload = {
+            currency: currency,
+            refno: refNo,
+            paymentMethods: [paymentMethod.paymentMethod],
+            redirect: redirectUrls,
+            webhook: webhookUrl,
+            amount: amount,
+            autoSettle: flowType.toLowerCase().includes('autocapture'),
+        };
+    
+        try {
+            const response = await axios.post(
+                'https://api.sandbox.datatrans.com/v1/transactions',
+                payload,
+                {
+                    headers: {
+                        'Authorization': getAuthHeader(merchantConfig),
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            logMessage(`[${uuid}] CIT Init successful: ${response.data.transactionId}`);
+            return {
+                transactionId: response.data.transactionId,
+                paymentPageUrl: response.headers.location,
+                redirectUrls: redirectUrls
+            };
+        } catch (error) {
+            logMessage(`[${uuid}] CIT Init failed: ${error.response?.data?.message || error.message}`);
+            throw error;
+        }
     },
 
-    cancel: async (merchantConfig, transactionId) => {
-        return makeApiCall(merchantConfig, `${transactionId}/cancel`, {});
+    async capture(merchantConfig, transactionId, amount, currency, refNo, uuid) {
+        return this.callAPI(
+            merchantConfig,
+            `${transactionId}/settle`,
+            { amount, currency, refno: refNo },
+            'post',
+            uuid
+        );
     },
 
-    increase: async (merchantConfig, transactionId, amount, currency, refno) => {
-        return makeApiCall(merchantConfig, `${transactionId}/increase`, { amount, currency, refno });
+    async cancel(merchantConfig, transactionId, uuid) {
+        return this.callAPI(
+            merchantConfig,
+            `${transactionId}/cancel`,
+            {},
+            'post',
+            uuid
+        );
     },
 
-    credit: async (merchantConfig, transactionId, amount, currency, refno) => {
-        return makeApiCall(merchantConfig, `${transactionId}/credit`, { amount, currency, refno });
+    async credit(merchantConfig, transactionId, amount, currency, refNo, uuid) {
+        return this.callAPI(
+            merchantConfig,
+            `${transactionId}/credit`,
+            { amount, currency, refno: refNo },
+            'post',
+            uuid
+        );
+    },
+
+    async increase(merchantConfig, transactionId, amount, currency, refNo, uuid) {
+        return this.callAPI(
+            merchantConfig,
+            `${transactionId}/increase`,
+            { amount, currency, refno: refNo },
+            'post',
+            uuid
+        );
+    },
+
+    async callAPI(merchantConfig, endpoint, payload, method, uuid) {
+        try {
+            const response = await axios({
+                method,
+                url: `https://api.sandbox.datatrans.com/v1/transactions/${endpoint}`,
+                headers: { 'Authorization': getAuthHeader(merchantConfig) },
+                data: payload
+            });
+
+            logMessage(`[${uuid}] API ${method.toUpperCase()} ${endpoint} success`);
+            return response.data;
+
+        } catch (error) {
+            const errorData = error.response?.data || {};
+            logMessage(`[${uuid}] API ${method.toUpperCase()} ${endpoint} failed: ${errorData.message || error.message}`);
+            throw error;
+        }
     }
 };
 
-module.exports = { transactionOperations, makeApiCall };
+module.exports = { transactionOperations };

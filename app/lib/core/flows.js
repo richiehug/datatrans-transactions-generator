@@ -2,88 +2,84 @@ const { transactionOperations } = require('../api/handlers');
 const { getRandomNumber } = require('../utils/helpers');
 
 const flowHandlers = {
-    decline: async () => {},
-    authorizeAutoCapture: async () => {},
-    authorizeNoCapture: async () => {},
+    // Shared Base Operations
+    _capture: async (m, id, amt, curr, ref, uid) => {
+        await transactionOperations.capture(m, id, amt, curr, ref, uid);
+    },
+    _cancel: async (m, id, uid) => {
+        await transactionOperations.cancel(m, id, uid);
+    },
+    _credit: async (m, id, amt, curr, ref, uid) => {
+        await transactionOperations.credit(m, id, amt, curr, ref, uid);
+    },
+
+    'CIT-decline3DS': async (m, id, uid) => {},
+    'authorizeAutoCapture': async () => {},
+    'authorizeNoCapture': async () => {},
+    'decline': async (m, id, uid) => {},
     
-    authorizeCancel: async (merchantConfig, transactionId) => {
-        await transactionOperations.cancel(merchantConfig, transactionId);
+    'authorizeCancel': async (m, id, uid) => {
+        await flowHandlers._cancel(m, id, uid);
     },
     
-    authorizeCapture: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        await transactionOperations.capture(merchantConfig, transactionId, amount, currency, refNo);
+    'authorizeCapture': async (m, id, amt, curr, ref, uid) => {
+        await flowHandlers._capture(m, id, amt, curr, ref, uid);
     },
     
-    authorizeCaptureRefund: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        await transactionOperations.capture(merchantConfig, transactionId, amount, currency, refNo);
-        await transactionOperations.credit(merchantConfig, transactionId, amount, currency, refNo + '-ref');
+    'authorizeCaptureRefund': async (m, id, amt, curr, ref, uid) => {
+        await flowHandlers._capture(m, id, amt, curr, ref, uid);
+        await flowHandlers._credit(m, id, amt, curr, ref + '-ref', uid);
     },
     
-    authorizeCaptureRefundPartial: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        const refundAmount = Math.min(amount * merchantConfig.limits.refund / 100, amount);
-        await transactionOperations.capture(merchantConfig, transactionId, amount, currency, refNo);
-        await transactionOperations.credit(merchantConfig, transactionId, refundAmount, currency, refNo + '-ref');
+    'authorizeCaptureRefundPartial': async (m, id, amt, curr, ref, uid) => {
+        const refundAmount = Math.floor(amt * 0.7);
+        await flowHandlers._capture(m, id, amt, curr, ref, uid);
+        await flowHandlers._credit(m, id, refundAmount, curr, ref + '-ref', uid);
     },
-    
-    authorizeTopUp: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        const topUpAmount = Math.min(amount * merchantConfig.limits.topUp / 100, amount);
-        await transactionOperations.increase(merchantConfig, transactionId, topUpAmount, currency, refNo + '-inc');
+
+    'authorizeCapturePartialRefund': async (m, id, amt, curr, ref, uid) => {
+        const captureAmount = Math.floor(amt * 0.7);
+        await flowHandlers._capture(m, id, captureAmount, curr, ref, uid);
+        await flowHandlers._credit(m, id, captureAmount, curr, ref + '-ref', uid);
     },
-    
-    authorizeTopUpCapture: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        const topUpAmount = Math.min(amount * merchantConfig.limits.topUp / 100, amount);
-        await transactionOperations.increase(merchantConfig, transactionId, topUpAmount, currency, refNo + '-inc');
-        await transactionOperations.capture(merchantConfig, transactionId, amount + topUpAmount, currency, refNo);
-    },
-    
-    authorizeTopUpCaptureRefund: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        const topUpAmount = Math.min(amount * merchantConfig.limits.topUp / 100, amount);
-        await transactionOperations.increase(merchantConfig, transactionId, topUpAmount, currency, refNo + '-inc');
-        await transactionOperations.capture(merchantConfig, transactionId, amount + topUpAmount, currency, refNo);
-        await transactionOperations.credit(merchantConfig, transactionId, amount + topUpAmount, currency, refNo + '-ref');
-    },
-    
-    authorizeAutoCaptureRefundMany: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        await transactionOperations.capture(merchantConfig, transactionId, amount, currency, refNo);
-        
-        const numberOfRefunds = getRandomNumber(2, 4);
-        let remainingAmount = amount;
-        
-        for (let i = 1; i <= numberOfRefunds; i++) {
-            const maxRefund = remainingAmount - (numberOfRefunds - i);
-            const refundAmount = i === numberOfRefunds
-                ? remainingAmount
-                : getRandomNumber(1, Math.floor(maxRefund));
-            
-            await transactionOperations.credit(merchantConfig, transactionId, refundAmount, currency, `${refNo}-ref${i}`);
-            remainingAmount -= refundAmount;
+
+    'authorizeAutoCaptureRefundMany': async (m, id, amt, curr, ref, uid) => {
+        const numRefunds = getRandomNumber(2, 4);
+        let remaining = amt;
+        for (let i = 1; i <= numRefunds; i++) {
+            const refundAmt = i === numRefunds ? remaining : Math.floor(remaining * 0.3);
+            await flowHandlers._credit(m, id, refundAmt, curr, `${ref}-ref${i}`, uid);
+            remaining -= refundAmt;
         }
     },
     
-    authorizeTopUpManyCapture: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        let totalAmount = amount;
-        const numberOfTopups = getRandomNumber(2, 4);
-        
-        for (let i = 1; i <= numberOfTopups; i++) {
-            const topupAmount = getRandomNumber(
-                Math.floor(amount * 0.1),
-                Math.floor(amount * merchantConfig.limits.topUp / 100)
-            );
-            
-            await transactionOperations.increase(merchantConfig, transactionId, topupAmount, currency, `${refNo}-inc${i}`);
-            totalAmount += topupAmount;
-        }
-        
-        await transactionOperations.capture(merchantConfig, transactionId, totalAmount, currency, refNo);
+    'authorizeTopUp': async (m, id, amt, curr, ref, uid) => {
+        const topUp = Math.min(amt * m.limits.topUp / 100, amt);
+        await transactionOperations.increase(m, id, topUp, curr, ref + '-inc', uid);
     },
     
-    authorizeCapturePartialRefund: async (merchantConfig, transactionId, amount, currency, refNo) => {
-        const captureAmount = getRandomNumber(
-            Math.floor(amount * 0.5),
-            Math.floor(amount * 0.9)
-        );
-        await transactionOperations.capture(merchantConfig, transactionId, captureAmount, currency, refNo);
-        await transactionOperations.credit(merchantConfig, transactionId, captureAmount, currency, `${refNo}-ref`);
+    'authorizeTopUpCapture': async (m, id, amt, curr, ref, uid) => {
+        const topUp = Math.min(amt * m.limits.topUp / 100, amt);
+        await transactionOperations.increase(m, id, topUp, curr, ref + '-inc', uid);
+        await flowHandlers._capture(m, id, amt + topUp, curr, ref, uid);
+    },
+    
+    'authorizeTopUpCaptureRefund': async (m, id, amt, curr, ref, uid) => {
+        const topUp = Math.min(amt * m.limits.topUp / 100, amt);
+        await transactionOperations.increase(m, id, topUp, curr, ref + '-inc', uid);
+        await flowHandlers._capture(m, id, amt + topUp, curr, ref, uid);
+        await flowHandlers._credit(m, id, amt + topUp, curr, ref + '-ref', uid);
+    },
+    
+    'authorizeTopUpManyCapture': async (m, id, amt, curr, ref, uid) => {
+        const numTopUps = getRandomNumber(2, 4);
+        let total = amt;
+        for (let i = 1; i <= numTopUps; i++) {
+            const topUp = getRandomNumber(50, Math.floor(amt * 0.2));
+            await transactionOperations.increase(m, id, topUp, curr, `${ref}-inc${i}`, uid);
+            total += topUp;
+        }
+        await flowHandlers._capture(m, id, total, curr, ref, uid);
     }
 };
 

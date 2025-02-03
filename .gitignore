@@ -1,0 +1,13 @@
+# Ignore configuration files
+app/config/config.json
+app/config/payment_methods.json
+
+# Ignore Node.js files
+node_modules/
+package-lock.json
+
+# Ignore logs
+app/logs/*
+
+# Ignore other files
+.DS_Store

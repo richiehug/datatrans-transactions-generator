@@ -1,15 +1,29 @@
 [
     {
         "type": "card",
-        "alias": "card-alias-1",
+        "number": 4111111111111111,
+        "paymentMethod": "VIS",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        },
+        "alias": "alias",
         "expiryMonth": "06",
-        "expiryYear": "25"
+        "expiryYear": "25",
+        "cvv": 123
     },
     {
         "type": "card",
-        "alias": "card-alias-2",
+        "number": 5404000000000001,
+        "paymentMethod": "ECA",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        },
+        "alias": "alias",
         "expiryMonth": "06",
         "expiryYear": "25",
+        "cvv": 123,
         "ranges": {
             "success": [
                 100,
