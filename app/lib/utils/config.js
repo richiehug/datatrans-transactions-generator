@@ -3,6 +3,30 @@ const path = require('path');
 const { flowHandlers } = require('../core/flows');
 
 const validateConfigStructure = (config) => {
+    if (config.configurations) {
+        config.configurations.forEach((cfg, index) => {
+            if (cfg.delay !== undefined) {
+                if (!Number.isInteger(cfg.delay) || cfg.delay < 0) {
+                    throw new Error(`Configuration ${index + 1}: delay must be a non-negative integer`);
+                }
+            }
+        });
+    }
+
+    if (config.logLimit !== undefined) {
+        if (!Number.isInteger(config.logLimit) || config.logLimit < 0) {
+            throw new Error('logLimit must be a non-negative integer');
+        }
+    }
+
+    if (config.loop !== undefined) {
+        if (typeof config.loop !== 'boolean') {
+            throw new Error('loop must be a boolean');
+        }
+    } else {
+        config.loop = false;
+    }
+
     if (!Array.isArray(config.configurations)) {
         throw new Error('Configurations must be an array');
     }
@@ -103,17 +127,22 @@ const validatePaymentMethods = (methods) => {
 
     methods.forEach(method => {
         if (!method.type) throw new Error('Payment method missing type');
-        if (!method.alias) throw new Error('Payment method missing alias');
 
         if (method.type === 'card') {
+            if (!method.alias) throw new Error('Card payment method missing alias');
+
             const requiredFields = ['number', 'expiryMonth', 'expiryYear'];
             requiredFields.forEach(field => {
                 if (!(field in method)) throw new Error(`Card payment method missing ${field}`);
             });
 
+            if (method.paymentMethod !== 'CUP' && !('cvv' in method)) {
+                throw new Error('Card payment method missing CVV');
+            }
+
             if (method.expiryMonth.toString().length !== 2 ||
                 method.expiryYear.toString().length !== 2) {
-                throw new Error('Invalid card expiry format - use MM for month and MM for year');
+                throw new Error('Invalid card expiry format - use MM for month and YY for year');
             }
 
             if (method['3DS']) {
@@ -122,23 +151,26 @@ const validatePaymentMethods = (methods) => {
                     throw new Error('Invalid 3DS code format - must be numbers');
                 }
             }
+
+            if (method.ranges) {
+                const validRanges = ['success', 'decline'];
+                Object.entries(method.ranges).forEach(([rangeType, range]) => {
+                    if (!validRanges.includes(rangeType)) {
+                        throw new Error(`Invalid range type: ${rangeType}`);
+                    }
+                    if (!Array.isArray(range) || range.length !== 2 ||
+                        !range.every(Number.isInteger)) {
+                        throw new Error(`${rangeType} range must be an array of two integers`);
+                    }
+                });
+            }
+        } else {
+            // Non-card payment methods do not require alias
+            delete method.alias;
         }
 
         if (method.maxAttempts && !Number.isInteger(method.maxAttempts)) {
             throw new Error('maxAttempts must be an integer');
-        }
-
-        if (method.ranges) {
-            const validRanges = ['success', 'decline'];
-            Object.entries(method.ranges).forEach(([rangeType, range]) => {
-                if (!validRanges.includes(rangeType)) {
-                    throw new Error(`Invalid range type: ${rangeType}`);
-                }
-                if (!Array.isArray(range) || range.length !== 2 ||
-                    !range.every(Number.isInteger)) {
-                    throw new Error(`${rangeType} range must be an array of two integers`);
-                }
-            });
         }
 
         if (method.currencies) {
@@ -148,6 +180,16 @@ const validatePaymentMethods = (methods) => {
             }
         }
     });
+
+    // Ensure at least one card exists with all required elements across all provided cards
+    const hasSuccessRange = methods.some(m => m.type === 'card' && m.ranges?.success);
+    const hasDeclineRange = methods.some(m => m.type === 'card' && m.ranges?.decline);
+    const has3DS = methods.some(m => m.type === 'card' && m['3DS']);
+
+    if (!(hasSuccessRange && hasDeclineRange && has3DS)) {
+        throw new Error('At least one card must have success range, decline range, and 3DS codes across all provided cards');
+    }
+
 };
 
 const loadConfig = () => {

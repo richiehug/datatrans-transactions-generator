@@ -1,4 +1,6 @@
 {
+    "logLimit": 100,
+    "loop": false,
     "configurations": [
         {
             "id": 1,
@@ -10,8 +12,15 @@
                     12,
                     16
                 ],
-                "prefix": "ORD-"
+                "prefix": "prefix-"
             },
+            "urls": {
+                "success": "https://example.com/confirmation/:refNo?r=success",
+                "cancel": "https://example.com/checkout/:refNo?r=cancel",
+                "error": "https://example.com/checkout/:refNo?r=error",
+                "webhook": "https://example.com/webhook/:refNo"
+            },
+            "delay": 10,
             "currencies": [
                 "CHF",
                 "EUR",
