@@ -49,17 +49,27 @@ Here’s what you can simulate:
 | `authorizeAutoCapture`         | Authorizes and automatically captures the transaction.                      |
 | `authorizeNoCapture`           | Authorizes but leaves the capture pending.                                  |
 | `decline`                      | Attempts to authorize with an amount and payment method that will decline.  |
-| `decline3DS`                      | Attempts to authorize with an amount and payment method that will decline during the 3DS flow. Only available for CIT flows. |
+| `decline3DS`                   | Attempts to authorize with an amount and payment method that will decline during the 3DS flow. Only available for CIT flows. |
 | `authorizeCancel`              | Authorizes, then cancels the transaction.                                   |
 | `authorizeCapture`             | Authorizes, then captures the full authorized amount.                       |
 | `authorizeCaptureRefund`       | Authorizes, captures the full amount, then refunds the full amount.         |
 | `authorizeCaptureRefundPartial`| Authorizes, captures the full amount, then refunds a partial amount.        |
 | `authorizeCapturePartialRefund`| Authorizes, captures a partial amount, then refunds the full capture amount.|
-| `authorizeAutoCaptureRefundMany`        | Authorizes and automatically captures the transaction, then partially refunds 2-4 times the transaction.                   |
+| `authorizeAutoCaptureRefundMany` | Authorizes and automatically captures the transaction, then partially refunds 2-4 times the transaction.                   |
 | `authorizeTopUp`               | Authorizes, adds a top-up, and leaves the capture pending.                  |
 | `authorizeTopUpCapture`        | Authorizes, adds a top-up, then captures the transaction.                   |
 | `authorizeTopUpCaptureRefund`  | Authorizes, adds a top-up, captures, then refunds the transaction.          |
-| `authorizeTopUpManyCapture`  | Authorizes, adds 2-4 top-ups, then captures the transaction.          |
+| `authorizeTopUpManyCapture`    | Authorizes, adds 2-4 top-ups, then captures the transaction.          |
+
+### Supported Payment Methods
+
+| Payment Method                        | Details                                                                 |
+|----------------------------------|-----------------------------------------------------------------------------|
+| Credit & Debit Cards | ![MasterCard](docs/assets/mastercard.svg) ![Visa](docs/assets/visa.svg) ![American Express](docs/assets/american-express.svg) ![China UnionPay](docs/assets/union-pay.svg) ![Diners](docs/assets/diners.svg) ![Discover](docs/assets/discover.svg) ![JCB](docs/assets/jcb.svg) </br> MasterCard (`ECA`), Visa (`VIS`), American Express (`AMX`), China Union Pay (`CUP`), Diners (`DIN`), Discover (`DIS`), JCB (`JCB`) and more can be used during your tests.  Credit and debit cards are supported. Cards can be used with any flow. DCC and the `decline3DS` flow will only be possible with properly setup cards. |
+| Klarna        | ![Klarna](docs/assets/klarna.svg) </br> Can only be tested via CIT flows. |
+| PayPal        | ![PayPal](docs/assets/paypal.svg) </br> Can only be tested via CIT flows. PayPal test buyer account required. |
+| PostFinance   | ![PostFinance](docs/assets/postfinance.svg) </br> Can only be tested via CIT flows. |
+| Twint         | ![Twint](docs/assets/twint.svg) </br> Can only be tested via MIT flows with Twint alias. |
 
 ## Configuration
 
@@ -83,7 +93,7 @@ This file defines your global and merchant configurations and the flows you want
 | `currencies`         | List of possible currencies for transactions.                               | Array, String    |
 | `amounts`            | Range and/or specific amounts for transactions.                             | Object   |
 | `transactionFlows.CIT.*` `transactionFlows.MIT.*`  | Number of tests to perform for each flow. Take the names of the flows from above.                                   | Int   |
-| `limits.*`             | Max percentage for top-ups and partial refunds (based on authorized/captured amount).| Int   |
+| `limits.*`           | Max percentage for top-ups and partial refunds (based on authorized/captured amount).| Int   |
 | `paymentMethods.cards` `paymentMethods.APM`   | Controls which payment methods are used:</br>- `cards`: Credit/debit card schemes</br>- `APM`: Alternative Payment Methods</br></br>Options:</br>- `"cards": true`: Allow all in category</br>- `"cards": ["VIS"]`: Specific payment methods / card brands</br></br>Note: When defined, only specified categories/methods are used. Omit this parameter to allow all payment methods.                                                    | Bool or Array, String    |
 
 #### config.json Example
