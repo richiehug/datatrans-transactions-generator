@@ -7,17 +7,20 @@ const { handlePaymentPage } = require('./core/paymentPageHandler');
 const { v4: uuidv4 } = require('uuid');
 
 const { config, savedMethods } = loadConfig();
-setLogSizeLimit(config.logLimit || null); 
+setLogSizeLimit(config.logLimit || null);
 initializeLogger();
 
-const flowStatistics = {
+let flowStatistics = {
     totalTests: 0,
     flows: {}
 };
 
-const getPaymentMethod = (currency, flowType, merchantConfig, uuid = {}) => {
+const getPaymentMethod = (currency, flowType, merchantConfig, uuid = {}, processedFlows, totalFlows) => {
     const [flowCategory, specificFlow] = flowType.split('-');
+    const isCITFlow = flowCategory === 'CIT';
     const isDeclineFlow = specificFlow === 'decline' || specificFlow === 'decline3DS';
+    const isTopUpFlow = specificFlow.includes('TopUp');
+    const isRefundFlow = flowType.includes('Refund');
 
     const allowedPaymentMethods = merchantConfig.paymentMethods ?? {};
 
@@ -29,6 +32,11 @@ const getPaymentMethod = (currency, flowType, merchantConfig, uuid = {}) => {
 
         const aliasValid = flowCategory === 'MIT' ? !!method.alias : true;
         const declineValid = isDeclineFlow ? method.ranges?.decline && Array.isArray(method.ranges.decline) && method.ranges.decline.length === 2 : true;
+        const topUpValid = isTopUpFlow ?
+            method.type === 'card' && (method.paymentMethod === 'VIS' || method.paymentMethod === 'ECA') :
+            true;
+        const citValid = !(isCITFlow && method.type === 'TWI');
+        const refundValid = !(isRefundFlow && method.type === 'PFC');
 
         let methodAllowed = false;
 
@@ -59,11 +67,12 @@ const getPaymentMethod = (currency, flowType, merchantConfig, uuid = {}) => {
             methodAllowed = true;
         }
 
-        return currencyValid && flowValid && aliasValid && declineValid && methodAllowed;
+        return currencyValid && flowValid && aliasValid && declineValid &&
+            topUpValid && citValid && refundValid && methodAllowed;
     });
 
     if (!validMethods.length) {
-        logMessage(`[${uuid}] No payment method found for ${flowCategory} > ${specificFlow}. Consider removing limits on paymentMethods or add payment methods that support your currency configurations.`);
+        logMessage(`[${uuid}] [${processedFlows}/${totalFlows}] No payment method found for ${flowCategory} > ${specificFlow}. Consider removing limits on paymentMethods or add payment methods that support your currency configurations.`);
         return null;
     }
 
@@ -87,6 +96,11 @@ const getTransactionAmount = (merchantConfig, paymentMethod, flowType) => {
 
 const executeFlows = async () => {
     // Initialize statistics
+    flowStatistics = {
+        totalTests: 0,
+        flows: {}
+    };
+
     config.configurations.forEach(merchantConfig => {
         Object.entries(merchantConfig.transactionFlows).forEach(([category, subFlows]) => {
             Object.entries(subFlows).forEach(([flowType, count]) => {
@@ -98,6 +112,15 @@ const executeFlows = async () => {
             });
         });
     });
+
+    logMessage(`
+
+############# Datatrans Transactions Generator ###########
+                    
+                    Starting new test...
+                    
+##########################################################
+`);
 
     // Create flow pool
     let flowPool = [];
@@ -115,6 +138,9 @@ const executeFlows = async () => {
         });
     });
 
+    const totalFlows = flowPool.length;
+    let processedFlows = 0;
+    
     // Shuffle flows
     flowPool = flowPool.sort(() => Math.random() - 0.5);
     const failedFlows = [];
@@ -135,6 +161,7 @@ const executeFlows = async () => {
                 // Remove flow from pool
                 const [currentFlow] = flowPool.splice(i, 1);
                 processed = true;
+                processedFlows++;
 
                 const uuid = uuidv4();
                 let transactionDetails = null;
@@ -142,10 +169,9 @@ const executeFlows = async () => {
                 try {
                     // Setup transaction
                     const currency = getRandomElement(merchantConfig.currencies);
-                    const paymentMethod = getPaymentMethod(currency, flowType, merchantConfig, uuid);
+                    const paymentMethod = getPaymentMethod(currency, flowType, merchantConfig, uuid, processedFlows, totalFlows);
 
                     if (!paymentMethod) {
-                        logMessage(`[${uuid}] No valid payment method for ${flowType}`);
                         continue;
                     }
 
@@ -157,27 +183,28 @@ const executeFlows = async () => {
                     flowStatistics.flows[flowType].executed++;
 
                     // Log execution
-                    let logMessageText = `[${uuid}] Starting ${flowType}
+                    let logMessageText = `[${uuid}] [${processedFlows}/${totalFlows}] Starting ${flowType}
+
 ================== Flow Execution ==================
-Config ID:    ${merchantConfig.id}
-Reference:    ${refNo}
-Amount:       ${amount} ${currency}
-Payment Method:
-    Type:       ${paymentMethod.type}`;
+Config ID:          ${merchantConfig.id}
+Reference:          ${refNo}
+Amount:             ${amount} ${currency}
+Payment Method:     ${paymentMethod.type}`;
 
                     if (paymentMethod.alias) {
                         logMessageText += `
-Alias:      ${paymentMethod.alias}`;
+Alias:              ${paymentMethod.alias}`;
                     }
 
                     if (paymentMethod.type === 'card') {
                         logMessageText += `
-Card:       ${paymentMethod.number.toString().slice(0, 6)}****${paymentMethod.number.toString().slice(-4)}
-Expiry:     ${paymentMethod.expiryMonth}/${paymentMethod.expiryYear}`;
+Card:               ${paymentMethod.number.toString().slice(0, 6)}****${paymentMethod.number.toString().slice(-4)}
+Expiry:             ${paymentMethod.expiryMonth}/${paymentMethod.expiryYear}`;
                     }
 
                     logMessageText += `
-====================================================`;
+====================================================
+`;
 
                     logMessage(logMessageText);
 
@@ -215,16 +242,6 @@ Expiry:     ${paymentMethod.expiryMonth}/${paymentMethod.expiryYear}`;
                             flowType,
                             uuid
                         );
-
-                        // Handle expected declines
-                        if (flowType === 'MIT-decline') {
-                            if (authResult === null) {
-                                logMessage(`[${uuid}] Transaction declined as expected`);
-                                await sleep(getRandomNumber(1000, 2000));
-                                continue;
-                            }
-                            throw new Error(`[${uuid}] Expected decline but got successful authorization`);
-                        }
 
                         if (!authResult) continue;
                         transactionId = authResult.transactionId;
@@ -267,7 +284,7 @@ ${error.stack || ''}`);
                     cooldownMap.set(configId, Date.now() + merchantConfig.delay * 1000);
                 }
 
-                break; // Restart loop after processing a flow
+                break;
             }
         }
 
@@ -279,7 +296,9 @@ ${error.stack || ''}`);
 
     // Generate final report
     logMessage(`
+
 #################### Execution Summary ####################
+
 Total Tests: ${flowStatistics.totalTests}
 Successful: ${flowStatistics.totalTests - failedFlows.length}
 Failed: ${failedFlows.length}
@@ -294,7 +313,8 @@ Failed Flows:
 ${failedFlows.map(f =>
         `• ${f.uuid} - ${f.flowType}: ${f.error}`
     ).join('\n')}` : ''}
-##########################################################`);
+##########################################################
+`);
 };
 
 module.exports = { executeFlows };
