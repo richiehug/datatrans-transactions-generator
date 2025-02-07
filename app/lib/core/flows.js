@@ -6,20 +6,20 @@ const flowHandlers = {
     _capture: async (m, id, amt, curr, ref, uid) => {
         await transactionOperations.capture(m, id, amt, curr, ref, uid);
     },
-    _cancel: async (m, id, uid) => {
-        await transactionOperations.cancel(m, id, uid);
+    _cancel: async (m, id, amt, curr, ref, uid) => {
+        await transactionOperations.cancel(m, id, amt, curr, ref, uid);
     },
     _credit: async (m, id, amt, curr, ref, uid) => {
         await transactionOperations.credit(m, id, amt, curr, ref, uid);
     },
 
-    'CIT-decline3DS': async (m, id, uid) => {},
+    'CIT-decline3DS': async () => {},
     'authorizeAutoCapture': async () => {},
     'authorizeNoCapture': async () => {},
-    'decline': async (m, id, uid) => {},
+    'decline': async () => {},
     
-    'authorizeCancel': async (m, id, uid) => {
-        await flowHandlers._cancel(m, id, uid);
+    'authorizeCancel': async (m, id, amt, curr, ref, uid) => {
+        await flowHandlers._cancel(m, id, amt, curr, ref, uid);
     },
     
     'authorizeCapture': async (m, id, amt, curr, ref, uid) => {

@@ -1,0 +1,89 @@
+[
+    {
+        "type": "KLN",
+        "payload": {
+            "order": {
+                "articles": [
+                    {
+                        "name": "some name",
+                        "quantity": "1",
+                        "price": "1",
+                        "taxPercent": "0"
+                    }
+                ]
+            }
+        },
+        "currencies": [
+            "CHF"
+        ]
+    },
+    {
+        "type": "PAP",
+        "account": {
+            "email": "email@example.com",
+            "password": "password"
+        }
+    },
+    {
+        "type": "PFC",
+        "currencies": [
+            "CHF"
+        ]
+    },
+    {
+        "type": "TWI",
+        "alias": "alias",
+        "maxAttempts": 10,
+        "ranges": {
+            "success": [
+                50,
+                100
+            ]
+        },
+        "currencies": [
+            "CHF"
+        ],
+        "transactionFlows": {
+            "MIT": [
+                "authorizeAutoCapture",
+                "authorizeCaptureRefund"
+            ]
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "VIS",
+        "number": 4111111111111111,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "ECA",
+        "number": 5404000000000001,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        },
+        "ranges": {
+            "success": [
+                100,
+                9000
+            ],
+            "decline": [
+                9001,
+                100000
+            ]
+        }
+    }
+]

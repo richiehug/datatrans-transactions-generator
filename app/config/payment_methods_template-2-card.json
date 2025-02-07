@@ -1,0 +1,189 @@
+[
+    {
+        "type": "card",
+        "paymentMethod": "ECA",
+        "number": 5404000000000001,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        },
+        "ranges": {
+            "success": [
+                100,
+                9000
+            ],
+            "decline": [
+                9001,
+                100000
+            ]
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "ECA",
+        "number": 5100001000000014,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "ECA",
+        "number": 5200000000000007,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "VIS",
+        "number": 4111111111111111,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "VIS",
+        "number": 4000001000000018,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "AMX",
+        "number": 340000100000016,
+        "alias": "alias",
+        "cvv": 1234,
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "paymentMethod": "AMX",
+        "number": 340000100000024,
+        "alias": "alias",
+        "cvv": 1234,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "CUP",
+        "number": 8100000000000002,
+        "alias": "alias",
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "paymentMethod": "DIN",
+        "number": 36000010000022,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        },
+        "ranges": {
+            "success": [
+                100,
+                9000
+            ],
+            "decline": [
+                9001,
+                100000
+            ]
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "DIN",
+        "number": 36000010000014,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "3DS": {
+            "successCode": 4000,
+            "errorCode": 4009
+        }
+    },
+    {
+        "type": "card",
+        "paymentMethod": "DIS",
+        "number": 6011420000000004,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "paymentMethod": "JCB",
+        "number": 3569990010030400,
+        "cvv": 123,
+        "alias": "alias",
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "paymentMethod": "JCB",
+        "number": 3569990010030400,
+        "cvv": 123,
+        "alias": "alias",
+        "expiryMonth": "06",
+        "expiryYear": "25"
+    },
+    {
+        "type": "card",
+        "paymentMethod": "JCB",
+        "number": 3569990010030442,
+        "alias": "alias",
+        "cvv": 123,
+        "expiryMonth": "06",
+        "expiryYear": "25",
+        "ranges": {
+            "success": [
+                100,
+                9000
+            ],
+            "decline": [
+                9001,
+                100000
+            ]
+        }
+    }
+]
